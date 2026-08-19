@@ -52,24 +52,34 @@ jobs:
         if (Test-Path "requirements.txt") { pip install -r requirements.txt }
       shell: pwsh
 
-
     - name: Build with Nuitka
       uses: Nuitka/Nuitka-Action@main
       with:
         nuitka-version: main
-        # 这里使用手动输入的 script_name
         script-name: ${{ github.event.inputs.script_name }}
         onefile: ${{ github.event.inputs.build_mode == 'onefile' }}
         standalone: ${{ github.event.inputs.build_mode == 'standalone' }}
+        # 可选：如果你希望统一输出到 dist 目录，可以添加以下参数（视 Action 版本支持情况而定）
+        # output-dir: dist
+
+    - name: Debug - List Files (Optional)
+      # 如果上传失败，开启这个步骤可以看到文件到底生成了哪里
+      if: failure()
+      run: |
+        Get-ChildItem -Recurse -Filter "*.exe" | Select-Object FullName
+        Get-ChildItem -Recurse -Filter "*.bin" | Select-Object FullName
+        Get-ChildItem -Recurse -Filter "main" | Select-Object FullName
+      shell: pwsh
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: Build-${{ github.event.inputs.os_selector }}-${{ github.event.inputs.build_mode }}
+        # 扩大搜索范围，确保能捕获到生成的文件
         path: |
-          build/*.exe
-          build/*.bin
-          build/main
-          dist/*.exe
-          dist/*.bin
-          dist/main
+          dist/**/*
+          build/**/*
+          *.exe
+          *.bin
+          main
+        if-no-files-found: error # 如果没有找到文件，直接报错，方便调试
