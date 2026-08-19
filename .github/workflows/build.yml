@@ -55,12 +55,12 @@ jobs:
       shell: pwsh
 
     - name: Build with Nuitka
+      # 将 action 固定到特定 tag，且通过单一的 mode 输入传递构建模式，避免同时生成 --mode= 与过时的 --onefile/--standalone 标志
       uses: Nuitka/Nuitka-Action@v1
       with:
-        nuitka-version: latest
+        nuitka-version: main
         script-name: ${{ github.event.inputs.script_name }}
-        onefile: ${{ github.event.inputs.build_mode == 'onefile' }}
-        standalone: ${{ github.event.inputs.build_mode == 'standalone' }}
+        mode: ${{ github.event.inputs.build_mode }}
         # 可选：如果你希望统一输出到 dist 目录，可以添加以下参数（视 Action 版本支持情况而定）
         # output-dir: dist
 
