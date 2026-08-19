@@ -1,0 +1,79 @@
+
+name: Manual Nuitka Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      os_selector:
+        description: '选择构建操作系统'
+        required: true
+        default: 'windows-latest'
+        type: choice
+        options:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+      build_mode:
+        description: 'Nuitka 构建模式'
+        required: true
+        default: 'onefile'
+        type: choice
+        options:
+          - onefile
+          - standalone
+      python_version:
+        description: 'Python 版本'
+        required: false
+        default: '3.10'
+        type: string
+      extra_nuitka_args:
+        description: '额外的 Nuitka 参数 (可选, 如 --enable-plugin=tk-inter)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  build:
+    runs-on: ${{ github.event.inputs.os_selector }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ github.event.inputs.python_version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # 安装 Nuitka 以便在后续步骤中直接使用或检查版本
+        pip install nuitka
+
+    - name: Build with Nuitka
+      uses: Nuitka/Nuitka-Action@main
+      with:
+        nuitka-version: main
+        script-name: main.py
+        # 根据用户选择的模式设置布尔值
+        onefile: ${{ github.event.inputs.build_mode == 'onefile' }}
+        standalone: ${{ github.event.inputs.build_mode == 'standalone' }}
+        # 传递额外的自定义参数
+        command-line-arguments: ${{ github.event.inputs.extra_nuitka_args }}
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Build-${{ github.event.inputs.os_selector }}-${{ github.event.inputs.build_mode }}
+        path: |
+          build/*.exe
+          build/*.bin
+          build/*.app/**/*
+          build/main
+          dist/*.exe
+          dist/*.bin
+          dist/*.app/**/*
+          dist/main
